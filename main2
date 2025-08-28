@@ -1,0 +1,89 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = Rayfield:CreateWindow({
+    Name = "Build A Boat AutoFarm",
+    LoadingTitle = "BABFT Autofarm Script",
+    LoadingSubtitle = "Credits to Sirius",
+    ConfigurationSaving = {Enabled = true, FileName = "BabftScript"},
+    KeySystem = false
+})
+
+local Tab = Window:CreateTab("Chest Grinder", 4483362458)
+local Section = Tab:CreateSection("Autofarm")
+
+local Players, TweenService = game:GetService("Players"), game:GetService("TweenService")
+local plr = Players.LocalPlayer
+game.Workspace.Gravity = 0.5
+
+local Stages, autoFarm, claimChest = {}, false, true
+for i=1,9 do table.insert(Stages, workspace.BoatStages.NormalStages:WaitForChild("CaveStage"..i)) end
+local theEnd = workspace.BoatStages.NormalStages:WaitForChild("TheEnd")
+
+-- SETTINGS
+Tab:CreateToggle({
+    Name = "AutoFarm",
+    CurrentValue = false,
+    Callback = function(Value)
+        autoFarm = Value
+        if autoFarm then task.spawn(farmLoop) end
+    end
+})
+
+Tab:CreateToggle({
+    Name = "Claim Chest (Gold Blocks)",
+    CurrentValue = true,
+    Callback = function(Value) claimChest = Value end
+})
+
+-- HELPERS
+local function getInnerParts(stage)
+    local dark = stage:FindFirstChild("DarknessPart")
+    if dark then
+        if not dark:FindFirstChild("InnerPart") then
+            local p = Instance.new("Part")
+            p.Name="InnerPart" p.Size=Vector3.new(5,1,5)
+            p.Anchored=true p.CanCollide=false
+            p.CFrame=dark.CFrame+Vector3.new(0,5,0)
+            p.Parent=dark
+        end
+        return {dark.InnerPart}
+    end
+    return {}
+end
+
+local function teleportToCFrame(cf,time)
+    local hrp = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        local tween=TweenService:Create(hrp,TweenInfo.new(time,Enum.EasingStyle.Linear),{CFrame=cf})
+        tween:Play() tween.Completed:Wait()
+    end
+end
+
+-- MAIN LOOP
+function farmLoop()
+    while autoFarm do
+        if not plr.Character or not plr.Character:FindFirstChild("HumanoidRootPart") then plr.CharacterAdded:Wait() end
+        for i=1,8 do
+            for _,part in ipairs(getInnerParts(Stages[i])) do
+                if not autoFarm then return end
+                teleportToCFrame(part.CFrame+Vector3.new(0,5,0),2)
+                task.wait(0.5)
+            end
+        end
+        for _,part in ipairs(getInnerParts(Stages[9])) do
+            if not autoFarm then return end
+            teleportToCFrame(part.CFrame-Vector3.new(0,5,0),2)
+            task.wait(0.5)
+        end
+        local chest = theEnd:FindFirstChild("GoldenChest")
+        if chest and chest:FindFirstChild("Trigger") then
+            if claimChest then
+                while chest:FindFirstChild("BeingClaimed") and autoFarm do task.wait(1) end
+                teleportToCFrame(chest.Trigger.CFrame+Vector3.new(0,5,0),1)
+                task.wait(15)
+            else
+                plr.Character:BreakJoints()
+                task.wait(5)
+            end
+        end
+    end
+end
